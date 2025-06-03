@@ -38,7 +38,7 @@ An AI-powered resume and job description matching application using natural lang
 
 1. **Clone the repository**:
 ```bash
-git clone https://github.com/yourusername/ResuMatch.git
+git clone https://github.com/gaurav-singh7092/ResuMatch.git
 cd ResuMatch
 ```
 
@@ -291,10 +291,10 @@ The application uses `config.py` for centralized configuration management with s
 
 ### Component Weights (Default)
 
-- **Semantic Similarity** (25%): Overall content alignment
-- **Skill Match** (40%): Technical and soft skills overlap
+- **Semantic Similarity** (35%): Overall content alignment
+- **Skill Match** (25%): Technical and soft skills overlap
 - **Experience Match** (15%): Years and type of experience
-- **Education Match** (5%): Educational background alignment
+- **Education Match** (10%): Educational background alignment
 - **Keyword Match** (15%): Important keyword overlap
 
 ### Score Interpretation
