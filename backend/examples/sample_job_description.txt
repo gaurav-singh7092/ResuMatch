@@ -1,0 +1,58 @@
+
+Senior Software Engineer - Full Stack
+
+Company: InnovateTech Solutions
+Location: San Francisco, CA (Remote options available)
+Experience Level: 4-7 years
+
+ABOUT THE ROLE
+We are seeking a talented Senior Software Engineer to join our growing engineering team. 
+You will be responsible for designing, developing, and maintaining scalable web applications 
+that serve millions of users worldwide.
+
+KEY RESPONSIBILITIES
+• Design and develop robust, scalable web applications
+• Write clean, maintainable, and well-tested code
+• Collaborate with product managers and designers to implement new features
+• Mentor junior developers and contribute to technical decision-making
+• Optimize application performance and ensure security best practices
+• Participate in code reviews and maintain high code quality standards
+
+REQUIRED QUALIFICATIONS
+• Bachelor's degree in Computer Science or related field
+• 4+ years of experience in software development
+• Strong proficiency in Python and JavaScript
+• Experience with modern web frameworks (Django, React, or similar)
+• Solid understanding of database design (PostgreSQL, MongoDB)
+• Experience with RESTful API design and development
+• Proficiency with Git version control
+• Experience with cloud platforms (AWS, GCP, or Azure)
+• Strong problem-solving and analytical skills
+• Excellent communication and teamwork abilities
+
+PREFERRED QUALIFICATIONS
+• Experience with microservices architecture
+• Knowledge of containerization technologies (Docker, Kubernetes)
+• Experience with CI/CD pipelines
+• Familiarity with agile development methodologies
+• Previous experience in a leadership or mentoring role
+• Contributions to open-source projects
+
+TECHNICAL STACK
+• Backend: Python, Django, PostgreSQL, Redis
+• Frontend: React, TypeScript, HTML5, CSS3
+• Infrastructure: AWS, Docker, Kubernetes, Jenkins
+• Monitoring: Prometheus, Grafana, ELK Stack
+
+WHAT WE OFFER
+• Competitive salary: $120,000 - $160,000
+• Equity package
+• Comprehensive health benefits
+• Flexible working arrangements
+• Professional development budget
+• Modern tech stack and tools
+• Collaborative and inclusive work environment
+
+TO APPLY
+Please submit your resume and a brief cover letter explaining why you're interested 
+in this position and how your experience aligns with our requirements.
