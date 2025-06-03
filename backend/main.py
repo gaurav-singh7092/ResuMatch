@@ -33,9 +33,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://resumatch.vercel.app", "https://resumatch-app.vercel.app", "*"],
+    allow_origins=["http://localhost:3000", "https://resumatch.vercel.app", "https://resumatch-app.vercel.app", "https://resmatchfrontend-crc4bg6mn-gaurav-singhs-projects-9a3381d4.vercel.app", "*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -174,6 +174,31 @@ async def analyze_resume_job_match(
     except Exception as e:
         logger.error(f"Unexpected error in analyze endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
+
+# Add an alias route for the British English spelling
+@app.post("/analyse")
+async def analyse_resume_job_match(
+    background_tasks: BackgroundTasks,
+    resume: UploadFile = File(...),
+    job_description: str = Form(...)
+):
+    # Redirect to the original function
+    return await analyze_resume_job_match(background_tasks, resume, job_description)
+
+# Also add GET routes to handle incorrect method types with helpful error messages
+@app.get("/analyze")
+async def analyze_get_method():
+    raise HTTPException(
+        status_code=405,
+        detail="Method not allowed. Use POST for resume analysis with multipart/form-data"
+    )
+
+@app.get("/analyse")
+async def analyse_get_method():
+    raise HTTPException(
+        status_code=405,
+        detail="Method not allowed. Use POST for resume analysis with multipart/form-data"
+    )
 
 
 @app.get("/analysis/{analysis_id}")
