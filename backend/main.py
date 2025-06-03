@@ -22,6 +22,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+cors_origins_str = os.environ.get("CORS_ORIGINS", "http://localhost:3000,https://resumatchfrontend.vercel.app")
+cors_origins = cors_origins_str.split(",")
+explicit_domains = [
+    "http://localhost:3000",
+    "https://resumatchfrontend.vercel.app",
+    "https://resmatchfrontend.vercel.app",
+    "https://resmatchfrontend-crc4bg6mn-gaurav-singhs-projects-9a3381d4.vercel.app"
+]
+all_origins = list(set(cors_origins + explicit_domains))
+logger.info(f"CORS origins: {all_origins}")
+
 app = FastAPI(
     title="ResuMatch",
     description="AI-Powered Resume-Job Matching Application",
@@ -33,7 +45,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://resumatch.vercel.app", "https://resumatch-app.vercel.app", "https://resmatchfrontend-crc4bg6mn-gaurav-singhs-projects-9a3381d4.vercel.app", "*"],
+    allow_origins=all_origins,  
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -287,6 +299,15 @@ async def debug_info():
             'cors_origins': os.environ.get('CORS_ORIGINS', 'Not set'),
             'port': os.environ.get('PORT', 'Not set'),
         }
+    })
+
+@app.get("/cors-test")
+async def cors_test():
+    """Simple endpoint to test CORS settings"""
+    return JSONResponse(content={
+        'message': 'CORS is working properly!',
+        'timestamp': datetime.now().isoformat(),
+        'configured_origins': all_origins
     })
 
 
