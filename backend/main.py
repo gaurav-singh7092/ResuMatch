@@ -266,6 +266,29 @@ async def get_statistics():
         'uptime': datetime.now().isoformat()
     })
 
+@app.get("/debug")
+async def debug_info():
+    """Endpoint for debugging deployment and configuration issues"""
+    import sys
+    import platform
+    import fastapi
+    
+    return JSONResponse(content={
+        'api_status': 'online',
+        'timestamp': datetime.now().isoformat(),
+        'python_version': sys.version,
+        'platform': platform.platform(),
+        'fastapi_version': fastapi.__version__,
+        'available_endpoints': [
+            {'path': route.path, 'methods': list(route.methods)} 
+            for route in app.routes
+        ],
+        'environment': {
+            'cors_origins': os.environ.get('CORS_ORIGINS', 'Not set'),
+            'port': os.environ.get('PORT', 'Not set'),
+        }
+    })
+
 
 if __name__ == "__main__":
     logger.info("Starting ResuMatch application...")
