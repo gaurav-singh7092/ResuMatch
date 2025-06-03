@@ -23,3 +23,5 @@ services:
         value: "0.10"
       - key: WEIGHT_KEYWORD
         value: "0.15"
+      - key: CORS_ORIGINS
+        value: "https://resmatchfrontend-crc4bg6mn-gaurav-singhs-projects-9a3381d4.vercel.app,http://localhost:3000"
