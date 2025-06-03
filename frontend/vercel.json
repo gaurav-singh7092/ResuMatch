@@ -8,5 +8,9 @@
   ],
   "env": {
     "NEXT_PUBLIC_API_URL": "https://resumatch-backend.onrender.com"
-  }
+  },
+  "redirects": [
+    { "source": "/analyse", "destination": "/analyze", "permanent": true },
+    { "source": "/analysis", "destination": "/analyze", "permanent": true }
+  ]
 }
