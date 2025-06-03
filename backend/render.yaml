@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: resumatch-backend
+    env: python
+    buildCommand: pip install -r requirements.txt && python -m spacy download en_core_web_sm
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "true"
+      - key: SENTENCE_MODEL
+        value: "all-MiniLM-L6-v2"
+      - key: MAX_FILE_SIZE
+        value: "52428800"
+      - key: MAX_BATCH_SIZE
+        value: "10"
+      - key: WEIGHT_SEMANTIC
+        value: "0.35"
+      - key: WEIGHT_SKILL
+        value: "0.25"
+      - key: WEIGHT_EXPERIENCE
+        value: "0.15"
+      - key: WEIGHT_EDUCATION
+        value: "0.10"
+      - key: WEIGHT_KEYWORD
+        value: "0.15"
