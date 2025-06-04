@@ -339,6 +339,7 @@ async def status_page():
     <html>
     <head>
         <title>ResuMatch API Status</title>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
         <style>
             body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
             .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
@@ -416,7 +417,13 @@ async def status_page():
     </body>
     </html>
     """
-    return HTMLResponse(content=html_content)
+    
+    # Set custom headers including CSP to allow inline scripts
+    headers = {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+    }
+    
+    return HTMLResponse(content=html_content, headers=headers)
 
 
 if __name__ == "__main__":
