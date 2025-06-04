@@ -1,5 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import asyncio
@@ -285,30 +285,138 @@ async def debug_info():
     import platform
     import fastapi
     
-    return JSONResponse(content={
-        'api_status': 'online',
-        'timestamp': datetime.now().isoformat(),
-        'python_version': sys.version,
-        'platform': platform.platform(),
-        'fastapi_version': fastapi.__version__,
-        'available_endpoints': [
-            {'path': route.path, 'methods': list(route.methods)} 
-            for route in app.routes
-        ],
-        'environment': {
-            'cors_origins': os.environ.get('CORS_ORIGINS', 'Not set'),
-            'port': os.environ.get('PORT', 'Not set'),
-        }
-    })
+    headers = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "*"
+    }
+    
+    return JSONResponse(
+        content={
+            'api_status': 'online',
+            'timestamp': datetime.now().isoformat(),
+            'python_version': sys.version,
+            'platform': platform.platform(),
+            'fastapi_version': fastapi.__version__,
+            'available_endpoints': [
+                {'path': route.path, 'methods': list(route.methods)} 
+                for route in app.routes
+            ],
+            'environment': {
+                'cors_origins': os.environ.get('CORS_ORIGINS', 'Not set'),
+                'port': os.environ.get('PORT', 'Not set'),
+            }
+        },
+        headers=headers
+    )
 
 @app.get("/cors-test")
 async def cors_test():
     """Simple endpoint to test CORS settings"""
-    return JSONResponse(content={
-        'message': 'CORS is working properly!',
-        'timestamp': datetime.now().isoformat(),
-        'configured_origins': all_origins
-    })
+    headers = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "*"
+    }
+    return JSONResponse(
+        content={
+            'message': 'CORS is working properly!',
+            'timestamp': datetime.now().isoformat(),
+            'configured_origins': all_origins,
+            'status': 'success'
+        },
+        headers=headers
+    )
+
+
+@app.get("/status", response_class=HTMLResponse)
+async def status_page():
+    """Browser-friendly status page"""
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>ResuMatch API Status</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
+            .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            .status {{ color: #28a745; font-weight: bold; }}
+            .endpoint {{ background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; }}
+            .cors-origins {{ background: #e9ecef; padding: 15px; border-radius: 5px; margin: 15px 0; }}
+            .test-button {{ background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 10px 5px; }}
+            .test-button:hover {{ background: #0056b3; }}
+            .result {{ margin: 15px 0; padding: 15px; border-radius: 5px; background: #f8f9fa; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎯 ResuMatch API Status</h1>
+            <p class="status">✅ API is online and running</p>
+            <p><strong>Timestamp:</strong> {datetime.now().isoformat()}</p>
+            
+            <h2>📋 Available Endpoints</h2>
+            <div class="endpoint"><strong>POST</strong> /analyze - Resume analysis</div>
+            <div class="endpoint"><strong>POST</strong> /analyse - Resume analysis (British spelling)</div>
+            <div class="endpoint"><strong>GET</strong> /health - Health check</div>
+            <div class="endpoint"><strong>GET</strong> /cors-test - CORS test</div>
+            <div class="endpoint"><strong>GET</strong> /debug - Debug information</div>
+            
+            <h2>🌐 CORS Configuration</h2>
+            <div class="cors-origins">
+                <strong>Allowed Origins:</strong><br>
+                {'<br>'.join(all_origins)}
+            </div>
+            
+            <h2>🧪 Test CORS</h2>
+            <button class="test-button" onclick="testCORS()">Test CORS from Browser</button>
+            <button class="test-button" onclick="testHealth()">Test Health Endpoint</button>
+            
+            <div id="test-result" class="result" style="display: none;"></div>
+            
+            <script>
+                async function testCORS() {{
+                    const resultDiv = document.getElementById('test-result');
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = 'Testing CORS...';
+                    
+                    try {{
+                        const response = await fetch('/cors-test');
+                        const data = await response.json();
+                        resultDiv.innerHTML = '<strong>✅ CORS Test Success:</strong><br>' + JSON.stringify(data, null, 2);
+                        resultDiv.style.background = '#d4edda';
+                        resultDiv.style.color = '#155724';
+                    }} catch (error) {{
+                        resultDiv.innerHTML = '<strong>❌ CORS Test Failed:</strong><br>' + error.message;
+                        resultDiv.style.background = '#f8d7da';
+                        resultDiv.style.color = '#721c24';
+                    }}
+                }}
+                
+                async function testHealth() {{
+                    const resultDiv = document.getElementById('test-result');
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = 'Testing health endpoint...';
+                    
+                    try {{
+                        const response = await fetch('/health');
+                        const data = await response.json();
+                        resultDiv.innerHTML = '<strong>✅ Health Test Success:</strong><br>' + JSON.stringify(data, null, 2);
+                        resultDiv.style.background = '#d4edda';
+                        resultDiv.style.color = '#155724';
+                    }} catch (error) {{
+                        resultDiv.innerHTML = '<strong>❌ Health Test Failed:</strong><br>' + error.message;
+                        resultDiv.style.background = '#f8d7da';
+                        resultDiv.style.color = '#721c24';
+                    }}
+                }}
+            </script>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 
 if __name__ == "__main__":
