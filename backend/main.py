@@ -29,9 +29,14 @@ explicit_domains = [
     "http://localhost:3000",
     "https://resumatchfrontend.vercel.app",
     "https://resmatchfrontend.vercel.app",
-    "https://resmatchfrontend-crc4bg6mn-gaurav-singhs-projects-9a3381d4.vercel.app"
+    "https://resmatchfrontend-crc4bg6mn-gaurav-singhs-projects-9a3381d4.vercel.app",
+    "https://resmatchfrontend-6wcnragsb-gaurav-singhs-projects-9a3381d4.vercel.app"
 ]
 all_origins = list(set(cors_origins + explicit_domains))
+
+# Add wildcard support for development and dynamic Vercel URLs
+if os.environ.get("ENVIRONMENT") != "production":
+    all_origins.append("*")
 logger.info(f"CORS origins: {all_origins}")
 
 app = FastAPI(
@@ -45,8 +50,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=all_origins,  
-    allow_credentials=True,
+    allow_origins=["*"],  # Temporarily allow all origins for debugging
+    allow_credentials=False,  # Must be False when using allow_origins=["*"]
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -417,6 +422,31 @@ async def status_page():
     }
     
     return HTMLResponse(content=html_content, headers=headers)
+
+
+@app.options("/analyze")
+async def options_analyze():
+    """Handle CORS preflight requests for analyze endpoint"""
+    return JSONResponse(
+        content={"message": "OK"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+@app.options("/analyse")
+async def options_analyse():
+    """Handle CORS preflight requests for analyse endpoint"""
+    return JSONResponse(
+        content={"message": "OK"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 
 if __name__ == "__main__":
