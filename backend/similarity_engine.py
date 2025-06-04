@@ -27,6 +27,9 @@ class SimilarityEngine:
             'education_match': 0.05,
             'keyword_match': 0.15
         }
+        
+        # Load models during initialization
+        self._load_models()
     
     def _load_models(self):
         try:
