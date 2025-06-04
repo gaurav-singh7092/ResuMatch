@@ -7,7 +7,7 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://resumatch-backend.onrender.com"
+    "NEXT_PUBLIC_API_URL": "https://resumatch-dxe3.onrender.com"
   },
   "redirects": [
     { "source": "/analyse", "destination": "/analyze", "permanent": true },
