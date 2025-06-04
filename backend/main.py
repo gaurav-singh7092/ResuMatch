@@ -187,17 +187,14 @@ async def analyze_resume_job_match(
         logger.error(f"Unexpected error in analyze endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error occurred")
 
-# Add an alias route for the British English spelling
 @app.post("/analyse")
 async def analyse_resume_job_match(
     background_tasks: BackgroundTasks,
     resume: UploadFile = File(...),
     job_description: str = Form(...)
 ):
-    # Redirect to the original function
     return await analyze_resume_job_match(background_tasks, resume, job_description)
 
-# Also add GET routes to handle incorrect method types with helpful error messages
 @app.get("/analyze")
 async def analyze_get_method():
     raise HTTPException(
@@ -280,7 +277,6 @@ async def get_statistics():
 
 @app.get("/debug")
 async def debug_info():
-    """Endpoint for debugging deployment and configuration issues"""
     import sys
     import platform
     import fastapi
@@ -313,7 +309,6 @@ async def debug_info():
 
 @app.get("/cors-test")
 async def cors_test():
-    """Simple endpoint to test CORS settings"""
     headers = {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
@@ -333,7 +328,6 @@ async def cors_test():
 
 @app.get("/status", response_class=HTMLResponse)
 async def status_page():
-    """Browser-friendly status page"""
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -359,7 +353,6 @@ async def status_page():
             
             <h2>📋 Available Endpoints</h2>
             <div class="endpoint"><strong>POST</strong> /analyze - Resume analysis</div>
-            <div class="endpoint"><strong>POST</strong> /analyse - Resume analysis (British spelling)</div>
             <div class="endpoint"><strong>GET</strong> /health - Health check</div>
             <div class="endpoint"><strong>GET</strong> /cors-test - CORS test</div>
             <div class="endpoint"><strong>GET</strong> /debug - Debug information</div>
