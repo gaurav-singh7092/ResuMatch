@@ -1,11 +1,9 @@
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
-import torch
-from transformers import AutoTokenizer, AutoModel
 from typing import Dict, List, Tuple, Any, Optional
 import logging
+import re
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -13,12 +11,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class SimilarityEngine:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "tfidf"):
         self.model_name = model_name
-        self.sentence_model = None
-        self.tokenizer = None
-        self.model = None
-        self.tfidf_vectorizer = TfidfVectorizer(max_features=5000, stop_words='english')
+        self.tfidf_vectorizer = TfidfVectorizer(max_features=5000, stop_words='english', ngram_range=(1, 2))
         
         self.weights = {
             'semantic_similarity': 0.25,
@@ -28,25 +23,17 @@ class SimilarityEngine:
             'keyword_match': 0.15
         }
         
-        # Load models during initialization
-        self._load_models()
-    
-    def _load_models(self):
-        try:
-            self.sentence_model = SentenceTransformer(self.model_name)
-            logger.info(f"Loaded SentenceTransformer: {self.model_name}")
-            
-            self.tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
-            self.model = AutoModel.from_pretrained('bert-base-uncased')
-            logger.info("Loaded BERT model as backup")
-            
-        except Exception as e:
-            logger.error(f"Model loading failed: {str(e)}")
-            try:
-                self.sentence_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
-                logger.info("Loaded fallback SentenceTransformer model")
-            except:
-                logger.warning("No transformer models available, using TF-IDF only")
+        # Predefined skill sets for better matching
+        self.skill_categories = {
+            'programming': ['python', 'java', 'javascript', 'typescript', 'c++', 'c#', 'ruby', 'php', 'go', 'rust', 'swift', 'kotlin'],
+            'web_development': ['html', 'css', 'react', 'angular', 'vue', 'node.js', 'express', 'django', 'flask', 'fastapi'],
+            'databases': ['sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'oracle', 'sqlite'],
+            'cloud': ['aws', 'azure', 'gcp', 'docker', 'kubernetes', 'terraform', 'jenkins', 'gitlab'],
+            'data_science': ['pandas', 'numpy', 'scikit-learn', 'tensorflow', 'pytorch', 'r', 'stata', 'spss'],
+            'tools': ['git', 'linux', 'bash', 'vim', 'vscode', 'intellij', 'eclipse', 'postman']
+        }
+        
+        logger.info("Initialized lightweight similarity engine with TF-IDF")
     
     def calculate_similarity(self, resume_data: Dict[str, Any], job_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
@@ -82,13 +69,10 @@ class SimilarityEngine:
                 overall_score += score * weight
                 
             boosted_score = overall_score ** 0.75
-
             final_score = min(100.0, boosted_score * 100 * 1.15)
             
             result['overall_score'] = round(final_score, 2)
-            
             result['detailed_analysis'] = self._generate_analysis(result)
-            
             result['recommendations'] = self._generate_recommendations(result)
             
             return result
@@ -98,248 +82,273 @@ class SimilarityEngine:
             return {
                 'overall_score': 0.0,
                 'component_scores': {},
-                'detailed_analysis': {'error': str(e)},
+                'detailed_analysis': {},
                 'recommendations': [],
                 'matched_skills': [],
                 'missing_skills': []
             }
     
+    def _get_semantic_embeddings(self, texts: List[str]) -> np.ndarray:
+        """Generate TF-IDF based embeddings as a lightweight alternative to transformers"""
+        try:
+            if len(texts) == 1:
+                # For single text, we need to fit and transform
+                embeddings = self.tfidf_vectorizer.fit_transform(texts)
+            else:
+                # For multiple texts, fit on all and transform all
+                embeddings = self.tfidf_vectorizer.fit_transform(texts)
+            
+            return embeddings.toarray()
+        except Exception as e:
+            logger.error(f"TF-IDF embedding generation failed: {str(e)}")
+            # Return dummy embeddings if TF-IDF fails
+            return np.random.rand(len(texts), 100)
+    
     def _calculate_semantic_similarity(self, resume_data: Dict[str, Any], job_data: Dict[str, Any]) -> float:
         try:
-            resume_text = resume_data.get('text_features', {}).get('processed_text', '')
-            job_text = job_data.get('text_features', {}).get('processed_text', '')
+            resume_text = self._extract_text_from_data(resume_data)
+            job_text = self._extract_text_from_data(job_data)
             
             if not resume_text or not job_text:
                 return 0.0
             
-            if self.sentence_model:
-                try:
-                    resume_embedding = self.sentence_model.encode(resume_text)
-                    job_embedding = self.sentence_model.encode(job_text)
-                    
-                    similarity = cosine_similarity([resume_embedding], [job_embedding])[0][0]
-                    return float(similarity)
-                    
-                except Exception as e:
-                    logger.warning(f"SentenceTransformer failed: {str(e)}")
+            embeddings = self._get_semantic_embeddings([resume_text, job_text])
+            similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
             
-            if self.tokenizer and self.model:
-                try:
-                    resume_embedding = self._get_bert_embedding(resume_text)
-                    job_embedding = self._get_bert_embedding(job_text)
-                    
-                    similarity = cosine_similarity([resume_embedding], [job_embedding])[0][0]
-                    return float(similarity)
-                    
-                except Exception as e:
-                    logger.warning(f"BERT embedding failed: {str(e)}")
-            
-            try:
-                tfidf_matrix = self.tfidf_vectorizer.fit_transform([resume_text, job_text])
-                similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-                return float(similarity)
-                
-            except Exception as e:
-                logger.warning(f"TF-IDF fallback failed: {str(e)}")
-                return 0.0
-                
+            return max(0.0, min(1.0, similarity))
         except Exception as e:
             logger.error(f"Semantic similarity calculation failed: {str(e)}")
             return 0.0
     
-    def _get_bert_embedding(self, text: str) -> np.ndarray:
-        inputs = self.tokenizer(text, return_tensors='pt', truncation=True, 
-                               padding=True, max_length=512)
-        
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-            embeddings = outputs.last_hidden_state.mean(dim=1)
-            
-        return embeddings.numpy().flatten()
-    
     def _calculate_skill_match(self, resume_data: Dict[str, Any], job_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            resume_skills = resume_data.get('skill_features', {})
-            job_skills = job_data.get('skill_features', {})
+            resume_skills = self._extract_skills(resume_data)
+            job_skills = self._extract_skills(job_data)
             
-            resume_all_skills = set()
-            job_all_skills = set()
-            
-            for category in ['programming_languages', 'frameworks_libraries', 'databases', 'tools_platforms']:
-                resume_category_skills = resume_skills.get(f'{category}_list', [])
-                job_category_skills = job_skills.get(f'{category}_list', [])
-                
-                resume_all_skills.update(resume_category_skills)
-                job_all_skills.update(job_category_skills)
-            
-            if not job_all_skills:
+            if not job_skills:
                 return {'score': 0.0, 'matched': [], 'missing': []}
             
-            matched_skills = list(resume_all_skills.intersection(job_all_skills))
-            missing_skills = list(job_all_skills - resume_all_skills)
+            matched_skills = []
+            for skill in job_skills:
+                if any(skill.lower() in resume_skill.lower() or resume_skill.lower() in skill.lower() 
+                      for resume_skill in resume_skills):
+                    matched_skills.append(skill)
             
-            if len(job_all_skills) > 0:
-                score = len(matched_skills) / len(job_all_skills)
-            else:
-                score = 0.0
+            missing_skills = [skill for skill in job_skills if skill not in matched_skills]
+            
+            score = len(matched_skills) / len(job_skills) if job_skills else 0.0
             
             return {
                 'score': score,
                 'matched': matched_skills,
                 'missing': missing_skills
             }
-            
         except Exception as e:
-            logger.error(f"Skill matching failed: {str(e)}")
+            logger.error(f"Skill match calculation failed: {str(e)}")
             return {'score': 0.0, 'matched': [], 'missing': []}
     
     def _calculate_experience_match(self, resume_data: Dict[str, Any], job_data: Dict[str, Any]) -> float:
         try:
-            resume_skills = resume_data.get('skill_features', {})
-            job_skills = job_data.get('skill_features', {})
+            resume_experience = self._extract_experience_years(resume_data)
+            job_experience = self._extract_experience_years(job_data)
             
-            resume_years = resume_skills.get('years_experience', [])
-            job_years = job_skills.get('years_experience', [])
+            if job_experience == 0:
+                return 1.0
             
-            if not resume_years or not job_years:
-                return 0.5
-            
-            max_resume_years = max(resume_years)
-            min_job_years = min(job_years)
-            
-            if max_resume_years >= min_job_years:
-                over_ratio = max_resume_years / min_job_years
-                return min(1.0, 0.7 + (over_ratio - 1) * 0.3)
+            if resume_experience >= job_experience:
+                return 1.0
             else:
-                return max(0.0, max_resume_years / min_job_years * 0.6)
-                
+                return resume_experience / job_experience
         except Exception as e:
-            logger.error(f"Experience matching failed: {str(e)}")
-            return 0.5
+            logger.error(f"Experience match calculation failed: {str(e)}")
+            return 0.0
     
     def _calculate_education_match(self, resume_data: Dict[str, Any], job_data: Dict[str, Any]) -> float:
         try:
-            resume_sections = resume_data.get('section_features', {})
-            job_sections = job_data.get('section_features', {})
+            resume_education = self._extract_education_level(resume_data)
+            job_education = self._extract_education_level(job_data)
             
-            resume_has_education = resume_sections.get('has_education', False)
-            job_requires_education = job_sections.get('has_education', False)
+            education_hierarchy = {
+                'phd': 6, 'doctorate': 6, 'doctoral': 6,
+                'masters': 5, 'master': 5, 'mba': 5, 'ms': 5, 'ma': 5,
+                'bachelors': 4, 'bachelor': 4, 'bs': 4, 'ba': 4, 'be': 4,
+                'associates': 3, 'associate': 3, 'diploma': 3,
+                'high school': 2, 'secondary': 2,
+                'none': 1
+            }
             
-            if not job_requires_education:
+            resume_level = education_hierarchy.get(resume_education.lower(), 1)
+            job_level = education_hierarchy.get(job_education.lower(), 1)
+            
+            if resume_level >= job_level:
                 return 1.0
-            
-            if resume_has_education and job_requires_education:
-                return 0.8
-            elif resume_has_education:
-                return 0.6
             else:
-                return 0.2
-                
+                return resume_level / job_level
         except Exception as e:
-            logger.error(f"Education matching failed: {str(e)}")
-            return 0.5
+            logger.error(f"Education match calculation failed: {str(e)}")
+            return 0.0
     
     def _calculate_keyword_match(self, resume_data: Dict[str, Any], job_data: Dict[str, Any]) -> float:
         try:
-            resume_text = resume_data.get('text_features', {}).get('processed_text', '')
-            job_text = job_data.get('text_features', {}).get('processed_text', '')
+            resume_text = self._extract_text_from_data(resume_data).lower()
+            job_text = self._extract_text_from_data(job_data).lower()
             
-            if not resume_text or not job_text:
+            if not job_text:
                 return 0.0
             
-            tfidf_matrix = self.tfidf_vectorizer.fit_transform([resume_text, job_text])
-            similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+            # Extract important keywords from job description
+            important_keywords = re.findall(r'\b[a-zA-Z]{3,}\b', job_text)
+            important_keywords = [word for word in important_keywords if len(word) > 3]
             
-            return float(similarity)
+            if not important_keywords:
+                return 0.0
             
+            matched_keywords = sum(1 for keyword in important_keywords if keyword in resume_text)
+            
+            return matched_keywords / len(important_keywords)
         except Exception as e:
-            logger.error(f"Keyword matching failed: {str(e)}")
+            logger.error(f"Keyword match calculation failed: {str(e)}")
             return 0.0
     
-    def _generate_analysis(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        analysis = {
-            'strengths': [],
-            'weaknesses': [],
-            'score_breakdown': {}
-        }
-        
+    def _extract_text_from_data(self, data: Dict[str, Any]) -> str:
         try:
-            scores = result['component_scores']
-            
-            for component, score in scores.items():
-                percentage = score * 100
-                analysis['score_breakdown'][component] = f"{percentage:.1f}%"
-                
-                if score >= 0.6:
-                    analysis['strengths'].append(f"Strong {component.replace('_', ' ')}")
-                elif score <= 0.25:
-                    analysis['weaknesses'].append(f"Weak {component.replace('_', ' ')}")
-            
-            overall = result['overall_score']
-            if overall >= 75:
-                analysis['overall_assessment'] = "Excellent match"
-            elif overall >= 60:
-                analysis['overall_assessment'] = "Good match"
-            elif overall >= 45:
-                analysis['overall_assessment'] = "Fair match"
+            if 'text' in data:
+                return str(data['text'])
+            elif 'cleaned_text' in data:
+                return str(data['cleaned_text'])
+            elif 'raw_text' in data:
+                return str(data['raw_text'])
             else:
-                analysis['overall_assessment'] = "Poor match"
-                
-        except Exception as e:
-            logger.error(f"Analysis generation failed: {str(e)}")
-            analysis['error'] = str(e)
+                # Combine all text fields
+                text_parts = []
+                for key, value in data.items():
+                    if isinstance(value, str) and len(value) > 10:
+                        text_parts.append(value)
+                    elif isinstance(value, dict):
+                        for subkey, subvalue in value.items():
+                            if isinstance(subvalue, str) and len(subvalue) > 10:
+                                text_parts.append(subvalue)
+                return ' '.join(text_parts)
+        except Exception:
+            return ""
+    
+    def _extract_skills(self, data: Dict[str, Any]) -> List[str]:
+        try:
+            skills = []
+            text = self._extract_text_from_data(data).lower()
+            
+            # Extract from predefined skill categories
+            for category, skill_list in self.skill_categories.items():
+                for skill in skill_list:
+                    if skill.lower() in text:
+                        skills.append(skill)
+            
+            # Extract from structured data if available
+            if 'keywords' in data and isinstance(data['keywords'], dict):
+                if 'technical_skills' in data['keywords']:
+                    skills.extend([skill['term'] for skill in data['keywords']['technical_skills']])
+            
+            return list(set(skills))
+        except Exception:
+            return []
+    
+    def _extract_experience_years(self, data: Dict[str, Any]) -> int:
+        try:
+            text = self._extract_text_from_data(data)
+            
+            # Look for patterns like "5 years", "3+ years", etc.
+            experience_patterns = [
+                r'(\d+)\+?\s*years?\s*(?:of\s*)?experience',
+                r'(\d+)\+?\s*years?\s*in',
+                r'experience\s*:\s*(\d+)\+?\s*years?',
+                r'(\d+)\+?\s*years?\s*working'
+            ]
+            
+            max_years = 0
+            for pattern in experience_patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                for match in matches:
+                    try:
+                        years = int(match)
+                        max_years = max(max_years, years)
+                    except ValueError:
+                        continue
+            
+            return max_years
+        except Exception:
+            return 0
+    
+    def _extract_education_level(self, data: Dict[str, Any]) -> str:
+        try:
+            text = self._extract_text_from_data(data).lower()
+            
+            education_keywords = {
+                'phd': ['phd', 'ph.d', 'doctorate', 'doctoral'],
+                'masters': ['masters', 'master', 'mba', 'm.s.', 'm.a.', 'ms ', 'ma '],
+                'bachelors': ['bachelors', 'bachelor', 'b.s.', 'b.a.', 'bs ', 'ba ', 'be ', 'b.e.'],
+                'associates': ['associates', 'associate', 'diploma'],
+                'high school': ['high school', 'secondary', '12th']
+            }
+            
+            for level, keywords in education_keywords.items():
+                if any(keyword in text for keyword in keywords):
+                    return level
+            
+            return 'none'
+        except Exception:
+            return 'none'
+    
+    def _generate_analysis(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            'strengths': self._identify_strengths(result),
+            'weaknesses': self._identify_weaknesses(result),
+            'score_breakdown': result['component_scores']
+        }
+    
+    def _identify_strengths(self, result: Dict[str, Any]) -> List[str]:
+        strengths = []
+        scores = result['component_scores']
         
-        return analysis
+        if scores.get('skill_match', 0) > 0.7:
+            strengths.append("Strong skill alignment with job requirements")
+        if scores.get('experience_match', 0) > 0.8:
+            strengths.append("Excellent experience match")
+        if scores.get('semantic_similarity', 0) > 0.6:
+            strengths.append("Good semantic relevance to job description")
+        if scores.get('keyword_match', 0) > 0.5:
+            strengths.append("Good keyword coverage")
+        
+        return strengths
+    
+    def _identify_weaknesses(self, result: Dict[str, Any]) -> List[str]:
+        weaknesses = []
+        scores = result['component_scores']
+        
+        if scores.get('skill_match', 0) < 0.3:
+            weaknesses.append("Limited skill match with job requirements")
+        if scores.get('experience_match', 0) < 0.5:
+            weaknesses.append("Experience level below job requirements")
+        if scores.get('semantic_similarity', 0) < 0.3:
+            weaknesses.append("Low semantic relevance to job description")
+        if len(result.get('missing_skills', [])) > 3:
+            weaknesses.append("Several key skills missing")
+        
+        return weaknesses
     
     def _generate_recommendations(self, result: Dict[str, Any]) -> List[str]:
         recommendations = []
+        missing_skills = result.get('missing_skills', [])
         
-        try:
-            scores = result['component_scores']
-            missing_skills = result.get('missing_skills', [])
-            
-            if scores.get('skill_match', 0) < 0.5 and missing_skills:
-                top_missing = missing_skills[:5]
-                recommendations.append(f"Consider adding these skills: {', '.join(top_missing)}")
-            
-            if scores.get('semantic_similarity', 0) < 0.4:
-                recommendations.append("Include more relevant keywords from the job description")
-                recommendations.append("Tailor your resume content to better match the role requirements")
-            
-            if scores.get('experience_match', 0) < 0.5:
-                recommendations.append("Highlight relevant work experience more prominently")
-                recommendations.append("Include specific examples of achievements in similar roles")
-            
-            if scores.get('education_match', 0) < 0.5:
-                recommendations.append("Ensure educational qualifications are clearly stated")
-                recommendations.append("Consider adding relevant certifications or courses")
-            
-            if scores.get('keyword_match', 0) < 0.4:
-                recommendations.append("Use more industry-specific terminology from the job posting")
-                recommendations.append("Include relevant buzzwords and technical terms")
-                
-        except Exception as e:
-            logger.error(f"Recommendation generation failed: {str(e)}")
-            recommendations.append("Unable to generate specific recommendations")
+        if missing_skills:
+            recommendations.append(f"Consider gaining experience in: {', '.join(missing_skills[:5])}")
         
-        return recommendations
-    
-    def update_weights(self, new_weights: Dict[str, float]):
-        if sum(new_weights.values()) != 1.0:
-            raise ValueError("Weights must sum to 1.0")
+        if result['component_scores'].get('experience_match', 0) < 0.7:
+            recommendations.append("Highlight relevant experience more prominently")
         
-        self.weights.update(new_weights)
-        logger.info(f"Updated weights: {self.weights}")
-    
-    def get_similarity_matrix(self, texts: List[str]) -> np.ndarray:
-        try:
-            if self.sentence_model:
-                embeddings = self.sentence_model.encode(texts)
-                return cosine_similarity(embeddings)
-            else:
-                tfidf_matrix = self.tfidf_vectorizer.fit_transform(texts)
-                return cosine_similarity(tfidf_matrix)
-                
-        except Exception as e:
-            logger.error(f"Similarity matrix calculation failed: {str(e)}")
-            return np.zeros((len(texts), len(texts)))
+        if result['component_scores'].get('keyword_match', 0) < 0.5:
+            recommendations.append("Include more relevant keywords from the job description")
+        
+        if result['component_scores'].get('semantic_similarity', 0) < 0.5:
+            recommendations.append("Tailor resume content to better match the job description")
+        
+        return recommendations[:5]  # Limit to top 5 recommendations
