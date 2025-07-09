@@ -143,3 +143,4 @@ coverage/
 
 # Documentation
 docs/_build/
+.vercel

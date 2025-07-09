@@ -1,13 +1,7 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
+  "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://resumatch-dxe3.onrender.com"
+    "NEXT_PUBLIC_API_URL": "https://resumatch-backend-225a388bc6b3.herokuapp.com"
   },
   "redirects": [
     { "source": "/analyse", "destination": "/analyze", "permanent": true },
