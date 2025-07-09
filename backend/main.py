@@ -451,9 +451,7 @@ async def options_analyse():
 
 if __name__ == "__main__":
     logger.info("Starting ResuMatch application...")
-    logger.info("Checking model availability...")
-    if similarity_engine.sentence_model is None:
-        logger.warning("SentenceTransformer model not loaded - some features may be limited")
+    logger.info("Using lightweight similarity engine with TF-IDF")
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
